@@ -242,6 +242,7 @@ export abstract class BasePHP implements IsomorphicLocalPHP, Disposable {
 		 * requests another PHP file, the second request may
 		 * be dispatched before the first one is finished.
 		 */
+
 		const release = await this.semaphore.acquire();
 		let heapBodyPointer;
 		try {
@@ -646,8 +647,7 @@ export abstract class BasePHP implements IsomorphicLocalPHP, Disposable {
 					'wasm_sapi_handle_request',
 					NUMBER,
 					[],
-					[],
-					{ async: true }
+					[]
 				);
 				if (response instanceof Promise) {
 					return response.then(resolve, reject);

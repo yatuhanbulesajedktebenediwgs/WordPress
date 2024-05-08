@@ -200,9 +200,9 @@ CC = /root/emsdk/upstream/emscripten/emcc
 CCDEPMODE = depmode=gcc3
 CFLAGS = -Qunused-arguments -Os
 CFLAG_CURL_SYMBOL_HIDING = -fvisibility=hidden
-CONFIGURE_OPTIONS = " '--build' 'i386-pc-linux-gnu' '--target' 'wasm32-unknown-emscripten' '--prefix=/root/lib/' '--disable-shared' '--enable-static' '--with-ssl' '--with-openssl=/root/lib' '--enable-https' '--enable-http' '--disable-pop3' '--disable-imap' '--disable-smb' '--disable-smtp' '--disable-telnet' '--disable-gopher' '--disable-ftp' '--disable-ftps' '--disable-rtsp' '--disable-tftp' '--disable-pthreads' '--disable-threaded-resolver' '--with-zlib=/root/lib' 'build_alias=i386-pc-linux-gnu' 'target_alias=wasm32-unknown-emscripten' 'CC=/root/emsdk/upstream/emscripten/emcc'"
+CONFIGURE_OPTIONS = " '--build' 'i386-pc-linux-gnu' '--target' 'wasm32-unknown-emscripten' '--prefix=/root/lib/' '--disable-shared' '--enable-static' '--with-ssl' '--with-openssl=/root/lib' '--enable-https' '--enable-http' '--disable-pop3' '--disable-imap' '--disable-smb' '--disable-smtp' '--disable-telnet' '--disable-gopher' '--disable-ftp' '--disable-ftps' '--disable-rtsp' '--disable-tftp' '--disable-pthreads' '--disable-threaded-resolver' '--with-zlib=/root/lib' 'build_alias=i386-pc-linux-gnu' 'target_alias=wasm32-unknown-emscripten' 'CC=/root/emsdk/upstream/emscripten/emcc' 'LDFLAGS=-L/root/lib/lib ' 'CPPFLAGS=-I/root/lib/include '"
 CPP = /root/emsdk/upstream/emscripten/emcc -E
-CPPFLAGS = -I/root/lib/include
+CPPFLAGS = -isystem /root/lib/include -I/root/lib/include
 CPPFLAG_CURL_STATICLIB = -DCURL_STATICLIB
 CURLVERSION = 7.69.1
 CURL_CA_BUNDLE = "/etc/ssl/certs/ca-certificates.crt"
@@ -259,7 +259,7 @@ INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
 IPV6_ENABLED = 
 LCOV = 
 LD = /root/emsdk/upstream/emscripten/emcc
-LDFLAGS = -L/root/lib/lib
+LDFLAGS = -L/root/lib/lib -L/root/lib/lib
 LIBCURL_LIBS = -lssl -lcrypto -lz
 LIBMETALINK_CPPFLAGS = 
 LIBMETALINK_LDFLAGS = 
