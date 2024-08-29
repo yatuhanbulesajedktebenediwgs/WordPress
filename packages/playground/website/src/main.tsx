@@ -10,62 +10,50 @@ import { SiteView } from './components/site-view/site-view';
 import { StorageTypes, StorageType } from './types';
 import { SiteManager } from './components/site-manager';
 import { useBootPlayground } from './lib/use-boot-playground';
-import { Provider } from 'react-redux';
+import { Provider, useSelector } from 'react-redux';
 import { useEffect, useRef, useState } from '@wordpress/element';
-import store from './lib/redux-store';
+import store, { PlaygroundReduxState } from './lib/redux-store';
 import {
 	__experimentalNavigatorProvider as NavigatorProvider,
 	__experimentalNavigatorScreen as NavigatorScreen,
 } from '@wordpress/components';
+import { Blueprint } from '@wp-playground/blueprints';
 
 collectWindowErrors(logger);
 
-const query = new URL(document.location.href).searchParams;
-const blueprint = await resolveBlueprint();
-
-// @ts-ignore
-const opfsSupported = typeof navigator?.storage?.getDirectory !== 'undefined';
-let storageRaw = query.get('storage');
-if (StorageTypes.includes(storageRaw as any) && !opfsSupported) {
-	storageRaw = 'none';
-} else if (!StorageTypes.includes(storageRaw as any)) {
-	storageRaw = 'none';
-}
-const storage = storageRaw as StorageType;
-
-const currentConfiguration: PlaygroundConfiguration = {
-	wp: blueprint.preferredVersions?.wp || 'latest',
-	php: resolveVersion(blueprint.preferredVersions?.php, SupportedPHPVersions),
-	storage: storage || 'none',
-	withExtensions: blueprint.phpExtensionBundles?.[0] !== 'light',
-	withNetworking: blueprint.features?.networking || false,
-	resetSite: false,
-};
-
-/*
- * The 6.3 release includes a caching bug where
- * registered styles aren't enqueued when they
- * should be. This isn't present in all environments
- * but it does here in the Playground. For now,
- * the fix is to define `WP_DEVELOPMENT_MODE = all`
- * to bypass the style cache.
- *
- * @see https://core.trac.wordpress.org/ticket/59056
- */
-if (currentConfiguration.wp === '6.3') {
-	blueprint.steps?.unshift({
-		step: 'defineWpConfigConsts',
-		consts: {
-			WP_DEVELOPMENT_MODE: 'all',
-		},
-	});
-}
-
 function Main() {
+	const query = new URL(document.location.href).searchParams;
+
+	// @ts-ignore
+	const opfsSupported =
+		typeof navigator?.storage?.getDirectory !== 'undefined';
+	let storageRaw = query.get('storage');
+	if (StorageTypes.includes(storageRaw as any) && !opfsSupported) {
+		storageRaw = 'none';
+	} else if (!StorageTypes.includes(storageRaw as any)) {
+		storageRaw = 'none';
+	}
+	const storage = storageRaw as StorageType;
+
+	const mountDescriptor = useSelector(
+		(state: PlaygroundReduxState) => state.opfsMountDescriptor
+	);
 	const siteViewRef = useRef<HTMLDivElement>(null);
 	const [siteSlug, setSiteSlug] = useState<string | undefined>(
 		query.get('site-slug') ?? undefined
 	);
+	const [{ blueprint, currentConfiguration }, setBlueprintAndConfig] =
+		useState<{
+			blueprint?: Blueprint;
+			currentConfiguration?: PlaygroundConfiguration;
+		}>({});
+
+	useEffect(() => {
+		async function assignConfigState() {
+			setBlueprintAndConfig(await compileConfiguration(storage));
+		}
+		assignConfigState();
+	}, [storage, mountDescriptor]);
 
 	useEffect(() => {
 		if (siteSlug && storage !== 'browser') {
@@ -73,9 +61,12 @@ function Main() {
 				'Site slugs only work with browser storage. The site slug will be ignored.'
 			);
 		}
-	}, [siteSlug]);
+	}, [siteSlug, storage]);
 
-	const { playground, url, iframeRef } = useBootPlayground({ blueprint });
+	const { playground, url, iframeRef } = useBootPlayground({
+		blueprint,
+		mountDescriptor,
+	});
 
 	return (
 		<NavigatorProvider initialPath="/" className={css.playgroundNavigator}>
@@ -111,6 +102,46 @@ root.render(
 		<Main />
 	</Provider>
 );
+
+async function compileConfiguration(storage: StorageType) {
+	const blueprint = await resolveBlueprint();
+
+	const currentConfiguration: PlaygroundConfiguration = {
+		wp: blueprint.preferredVersions?.wp || 'latest',
+		php: resolveVersion(
+			blueprint.preferredVersions?.php,
+			SupportedPHPVersions
+		),
+		storage: storage || 'none',
+		withExtensions: blueprint.phpExtensionBundles?.[0] !== 'light',
+		withNetworking: blueprint.features?.networking || false,
+		resetSite: false,
+	};
+
+	/*
+	 * The 6.3 release includes a caching bug where
+	 * registered styles aren't enqueued when they
+	 * should be. This isn't present in all environments
+	 * but it does here in the Playground. For now,
+	 * the fix is to define `WP_DEVELOPMENT_MODE = all`
+	 * to bypass the style cache.
+	 *
+	 * @see https://core.trac.wordpress.org/ticket/59056
+	 */
+	if (currentConfiguration.wp === '6.3') {
+		blueprint.steps?.unshift({
+			step: 'defineWpConfigConsts',
+			consts: {
+				WP_DEVELOPMENT_MODE: 'all',
+			},
+		});
+	}
+
+	return {
+		blueprint,
+		currentConfiguration,
+	};
+}
 
 function resolveVersion<T>(
 	version: string | undefined,
